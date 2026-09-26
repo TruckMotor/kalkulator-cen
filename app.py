@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 # -----------------------------------------
-# KONFIGURACJA STRONY I WYGLĄDU (Agresywne zawijanie tekstu)
+# KONFIGURACJA STRONY I WYGLĄDU (POZIOME PRZEWIJANIE)
 # -----------------------------------------
 st.set_page_config(page_title="Kalkulator Heli - Truck Motor", layout="wide", initial_sidebar_state="expanded")
 
@@ -18,39 +18,28 @@ st.markdown("""
         color: #000000 !important; 
     }
     
-    /* GŁĘBOKIE WYMUSZENIE ZAWIJANIA W SELECTBOXACH */
-    /* 1. Wybrana wartość w polu */
+    /* POZIOME PRZEWIJANIE ZAMIAST ZAWIJANIA W SELECTBOXACH */
     div[data-baseweb="select"] {
         border: 1px solid #777 !important;
         background-color: #ffffff !important;
     }
     div[data-baseweb="select"] > div {
-        height: auto !important;
-        min-height: 40px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
     }
     div[data-baseweb="select"] div, div[data-baseweb="select"] span {
-        white-space: normal !important;
-        overflow: visible !important;
-        text-overflow: unset !important;
-        line-height: 1.4 !important;
+        white-space: nowrap !important;
     }
     
-    /* 2. Rozwijana lista opcji */
+    /* Rozwijana lista opcji z paskiem przewijania */
     div[data-baseweb="popover"] ul {
         max-height: 60vh !important;
+        overflow-x: auto !important;
     }
     div[data-baseweb="popover"] li {
-        white-space: normal !important;
-        height: auto !important;
-        min-height: 40px !important;
-        padding: 10px !important;
-        line-height: 1.4 !important;
-        align-items: flex-start !important;
-    }
-    div[data-baseweb="popover"] li span {
-        white-space: normal !important;
-        display: inline-block !important;
-        width: 100% !important;
+        white-space: nowrap !important;
+        padding-right: 30px !important;
     }
     
     /* Przyciski i Nagłówki */

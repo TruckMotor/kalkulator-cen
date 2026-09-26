@@ -43,13 +43,17 @@ def load_all_data():
         data['kabiny_raw'] = pd.read_excel(file_name, sheet_name="Baza_Kabina", header=None, engine="openpyxl")
         data['widly_raw'] = pd.read_excel(file_name, sheet_name="Baza_Widły", header=None, engine="openpyxl")
         data['osprzet_raw'] = pd.read_excel(file_name, sheet_name="Baza_Osprzęt", header=None, engine="openpyxl")
+        data['oswietlenie_raw'] = pd.read_excel(file_name, sheet_name="Baza_oświetlenie", header=None, engine="openpyxl")
+        data['ops_raw'] = pd.read_excel(file_name, sheet_name="Baza_OPS+kay", header=None, engine="openpyxl")
+        data['bateria_raw'] = pd.read_excel(file_name, sheet_name="Baza_Bateria", header=None, engine="openpyxl")
+        data['ladowarka_raw'] = pd.read_excel(file_name, sheet_name="Baza_Ładowarka", header=None, engine="openpyxl")
         return data
     except Exception as e:
         st.error(f"Błąd odczytu pliku: {e}")
         return None
 
 def get_options_from_raw(df_raw, drive_type, series, tonnage):
-    options = {"Brak": 0.0} # Dodajemy domyślną opcję braku dopłaty
+    options = {"Brak (0 USD)": 0.0} 
     target_col = None
     
     for col in range(1, len(df_raw.columns)):
@@ -72,7 +76,7 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage):
     return options
 
 def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
-    options = {"Brak": 0.0}
+    options = {"Brak (0 USD)": 0.0}
     target_col = None
     
     for col in range(1, len(df_maszty.columns)):
@@ -156,7 +160,6 @@ def view_calculator():
         dostepne_modele = df_wozki[df_wozki['Typ Napędu'] == typ_napedu]['Model Wózka'].dropna().tolist()
         model = c2.selectbox("Wybierz model wózka:", dostepne_modele)
         
-        # Parametry wózka
         wiersz_wozka = df_wozki[df_wozki['Model Wózka'] == model].iloc[0]
         base_price_usd = float(wiersz_wozka['Cena Bazowa (USD)'])
         grupa_tonazowa = str(wiersz_wozka['Grupa Tonażowa']).strip()
@@ -165,42 +168,42 @@ def view_calculator():
         st.markdown("### Maszt i Hydraulika")
         c3_0 = st.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
         
-        # Pobieranie opcji na bazie wybranego wózka
+        # Pobieranie opcji z bazy
         maszty_dict = get_mast_options(db['maszty_raw'], grupa_tonazowa, c3_0)
         opony_dict = get_options_from_raw(db['opony_raw'], typ_napedu, seria, grupa_tonazowa)
         kabiny_dict = get_options_from_raw(db['kabiny_raw'], typ_napedu, seria, grupa_tonazowa)
         widly_dict = get_options_from_raw(db['widly_raw'], typ_napedu, seria, grupa_tonazowa)
         osprzet_dict = get_options_from_raw(db['osprzet_raw'], typ_napedu, seria, grupa_tonazowa)
+        oswietlenie_dict = get_options_from_raw(db['oswietlenie_raw'], typ_napedu, seria, grupa_tonazowa)
+        ops_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa)
 
         c3, c4, c5 = st.columns(3)
-        lista_masztow = list(maszty_dict.keys())
-        maszt = c3.selectbox("Typ i wysokość masztu:", lista_masztow)
-        
-        lista_widel = list(widly_dict.keys())
-        widly = c4.selectbox("Wymiar wideł:", lista_widel)
-        
-        lista_osprzetu = list(osprzet_dict.keys())
-        osprzet = c5.selectbox("Osprzęt:", lista_osprzetu)
+        maszt = c3.selectbox("Typ i wysokość masztu:", list(maszty_dict.keys()))
+        widly = c4.selectbox("Wymiar wideł:", list(widly_dict.keys()))
+        osprzet = c5.selectbox("Osprzęt:", list(osprzet_dict.keys()))
         
         st.markdown("### Wyposażenie dodatkowe")
         c6, c7 = st.columns(2)
-        
-        lista_kabin = list(kabiny_dict.keys())
-        kabina = c6.selectbox("Opcje kabiny:", lista_kabin)
-        
-        lista_opon = list(opony_dict.keys())
-        opony = c7.selectbox("Rodzaj opon:", lista_opon)
+        kabina = c6.selectbox("Opcje kabiny:", list(kabiny_dict.keys()))
+        opony = c7.selectbox("Rodzaj opon:", list(opony_dict.keys()))
         
         c8, c9 = st.columns(2)
-        # Opcje zablokowane wizualnie na tym etapie MVP (możemy podłączyć analogicznie do bazy później)
-        oswietlenie = c8.selectbox("Oświetlenie (Przykładowe):", ["Standard LED", "LED + Blue Spot Tył", "LED + Blue Spot Przód i Tył"])
-        uruchamianie = c9.selectbox("Opcje uruchamiania (Przykładowe):", ["Kluczyk (Standard)", "Karta RFID", "Kod PIN"])
+        oswietlenie = c8.selectbox("Oświetlenie:", list(oswietlenie_dict.keys()))
+        uruchamianie = c9.selectbox("Uruchamianie i systemy OPS:", list(ops_dict.keys()))
 
+        # BATERIE TYLKO DLA ELEKTRYKÓW
+        bateria_price, ladowarka_price = 0, 0
         if "Elektryczny" in str(typ_napedu):
             st.markdown("### Zasilanie")
+            bateria_dict = get_options_from_raw(db['bateria_raw'], typ_napedu, seria, grupa_tonazowa)
+            ladowarka_dict = get_options_from_raw(db['ladowarka_raw'], typ_napedu, seria, grupa_tonazowa)
+            
             c10, c11 = st.columns(2)
-            bateria = c10.selectbox("Bateria:", ["Standard", "Powiększona"])
-            ladowarka = c11.selectbox("Ładowarka:", ["Standard", "Szybka"])
+            bateria = c10.selectbox("Bateria Li-Ion:", list(bateria_dict.keys()))
+            ladowarka = c11.selectbox("Ładowarka:", list(ladowarka_dict.keys()))
+            
+            bateria_price = bateria_dict.get(bateria, 0)
+            ladowarka_price = ladowarka_dict.get(ladowarka, 0)
 
         st.markdown("### Koszty i Narzuty")
         c12, c13 = st.columns(2)
@@ -210,14 +213,18 @@ def view_calculator():
     with col2:
         st.subheader("Wycena końcowa")
         
-        # Wyliczanie cen na podstawie bazy
         maszt_price = maszty_dict.get(maszt, 0)
         opony_price = opony_dict.get(opony, 0)
         kabina_price = kabiny_dict.get(kabina, 0)
         widly_price = widly_dict.get(widly, 0)
         osprzet_price = osprzet_dict.get(osprzet, 0)
+        oswietlenie_price = oswietlenie_dict.get(oswietlenie, 0)
+        ops_price = ops_dict.get(uruchamianie, 0)
         
-        suma_opcji_usd = maszt_price + opony_price + kabina_price + widly_price + osprzet_price
+        suma_opcji_usd = (maszt_price + opony_price + kabina_price + widly_price + 
+                          osprzet_price + oswietlenie_price + ops_price + 
+                          bateria_price + ladowarka_price)
+                          
         total_usd = base_price_usd + suma_opcji_usd
         total_pln = (total_usd * kurs_usd) + marza_kwotowa
         
@@ -229,8 +236,11 @@ def view_calculator():
             st.write(f"Opcje (Fabryka): **{suma_opcji_usd:,.2f} USD**")
             st.write(f"- Maszt: {maszt_price} USD")
             st.write(f"- Opony: {opony_price} USD")
-            st.write(f"- Osprzęt: {osprzet_price} USD")
             st.write(f"- Kabina: {kabina_price} USD")
+            st.write(f"- Osprzęt i widły: {osprzet_price + widly_price} USD")
+            st.write(f"- Światła i OPS: {oswietlenie_price + ops_price} USD")
+            if "Elektryczny" in str(typ_napedu):
+                st.write(f"- Bateria i Ładowarka: {bateria_price + ladowarka_price} USD")
             st.write("---")
         elif role == "Dealer":
             st.write("*(Szczegóły składowe są zastrzeżone)*")

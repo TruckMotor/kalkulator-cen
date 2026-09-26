@@ -74,11 +74,14 @@ if 'logged_in' not in st.session_state:
 # WIDOK LOGOWANIA 
 # -----------------------------------------
 def login_screen():
-    # Logo na ekranie logowania
+    # Logo na ekranie logowania - dodane zabezpieczenie try-except
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if os.path.exists("AUTORYZOWANY DYSTYBUTOR.png"):
-            st.image("AUTORYZOWANY DYSTYBUTOR.png", use_column_width=True)
+            try:
+                st.image("AUTORYZOWANY DYSTYBUTOR.png", use_container_width=True)
+            except Exception:
+                st.warning("Nie udało się załadować grafiki logo. Sprawdź format pliku.")
         else:
             st.warning("Brak pliku AUTORYZOWANY DYSTYBUTOR.png na serwerze.")
             
@@ -228,9 +231,12 @@ def view_change_password():
 # -----------------------------------------
 def main_app():
     with st.sidebar:
-        # Logo w panelu bocznym
+        # Logo w panelu bocznym - zabezpieczenie try-except
         if os.path.exists("AUTORYZOWANY DYSTYBUTOR.png"):
-            st.image("AUTORYZOWANY DYSTYBUTOR.png", use_column_width=True)
+            try:
+                st.image("AUTORYZOWANY DYSTYBUTOR.png", use_container_width=True)
+            except Exception:
+                pass
             
         st.write(f"Zalogowano: **{st.session_state.users_db[st.session_state.current_user]['name']}**")
         st.write(f"Rola: **{st.session_state.role}**")

@@ -132,17 +132,17 @@ def view_calculator():
         sekcje = st.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
         osprzet = st.selectbox("Osprzęt wideł:", ["Brak (standardowe widły)", "Zintegrowany przesuw boczny", "Pozycjoner wideł z przesuwem", "Obrotnica", "Uchwyt do bel"])
         
-        if "Elektryczny" in str(typ_napedu):
-            st.markdown("### 3. Zasilanie (Bateria i Ładowarka)")
-            bateria = st.selectbox("Pojemność i typ baterii:", ["Standardowa Li-Ion 80V/280Ah", "Powiększona Li-Ion 80V/404Ah", "Powiększona Li-Ion 80V/542Ah"])
-            ladowarka = st.selectbox("Typ ładowarki:", ["Standardowa (zintegrowana)", "Zewnętrzna (szybka)"])
-
-        st.markdown("### 4. Wyposażenie dodatkowe")
+        st.markdown("### 3. Wyposażenie dodatkowe")
         kabina = st.selectbox("Opcje kabiny:", ["Brak (tylko daszek)", "Półkabina (szyba przód/tył)", "Pełna kabina ogrzewana", "Pełna kabina z klimatyzacją"])
         opony = st.selectbox("Rodzaj opon:", ["Pneumatyczne (Standard)", "Pełne (Superelastyczne)", "Niebrudzące (Non-marking)"])
         oswietlenie = st.selectbox("Oświetlenie (LED / Blue Spot):", ["Standard LED", "LED + Blue Spot Tył", "LED + Blue Spot Przód i Tył"])
         uruchamianie = st.selectbox("Opcje uruchamiania (OPS):", ["Kluczyk (Standard)", "Karta RFID", "Kod PIN", "Czujnik obecności operatora (OPS)"])
-        
+
+        if "Elektryczny" in str(typ_napedu):
+            st.markdown("### 4. Zasilanie (Bateria i Ładowarka)")
+            bateria = st.selectbox("Pojemność i typ baterii:", ["Standardowa Li-Ion 80V/280Ah", "Powiększona Li-Ion 80V/404Ah", "Powiększona Li-Ion 80V/542Ah"])
+            ladowarka = st.selectbox("Typ ładowarki:", ["Standardowa (zintegrowana)", "Zewnętrzna (szybka)"])
+
         st.markdown("### 5. Koszty i Narzuty")
         kurs_usd = st.number_input("Aktualny Kurs USD/PLN:", value=4.00, step=0.01)
         marza_kwotowa = st.number_input("Twój narzut / Marża handlowca (w PLN):", value=0, step=100)

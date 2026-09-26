@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 # -----------------------------------------
-# KONFIGURACJA STRONY I WYGLĄDU (POZIOME PRZEWIJANIE)
+# KONFIGURACJA STRONY I WYGLĄDU (Szerokie listy)
 # -----------------------------------------
 st.set_page_config(page_title="Kalkulator Heli - Truck Motor", layout="wide", initial_sidebar_state="expanded")
 
@@ -12,32 +12,21 @@ st.markdown("""
     .stApp { background-color: #f4f4f4; color: #111111; }
     label { font-weight: 700 !important; color: #111111 !important; font-size: 14px !important; margin-bottom: -5px; }
     
-    .stTextInput input, .stNumberInput input { 
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { 
         border: 1px solid #777 !important; 
         background-color: #ffffff !important; 
         color: #000000 !important; 
     }
     
-    /* POZIOME PRZEWIJANIE ZAMIAST ZAWIJANIA W SELECTBOXACH */
-    div[data-baseweb="select"] {
-        border: 1px solid #777 !important;
-        background-color: #ffffff !important;
+    /* ROZSZERZENIE LISTY ROZWIJANEJ - Lista dopasowuje się do najdłuższego tekstu */
+    div[data-baseweb="popover"] > div {
+        width: max-content !important;
+        max-width: 95vw !important; 
     }
-    div[data-baseweb="select"] > div {
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        white-space: nowrap !important;
+    ul[role="listbox"] {
+        width: max-content !important;
     }
-    div[data-baseweb="select"] div, div[data-baseweb="select"] span {
-        white-space: nowrap !important;
-    }
-    
-    /* Rozwijana lista opcji z paskiem przewijania */
-    div[data-baseweb="popover"] ul {
-        max-height: 60vh !important;
-        overflow-x: auto !important;
-    }
-    div[data-baseweb="popover"] li {
+    ul[role="listbox"] li {
         white-space: nowrap !important;
         padding-right: 30px !important;
     }
@@ -86,6 +75,9 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data
     if data_end_row is None:
         data_end_row = len(df_raw)
         
+    if header_row + 2 >= len(df_raw):
+        return options
+        
     for col in range(1, len(df_raw.columns)):
         try:
             val_drive = str(df_raw.iloc[header_row, col]).strip()
@@ -94,7 +86,7 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data
             if (val_drive == str(drive_type) and val_series == str(series) and val_tonnage == str(tonnage)):
                 target_col = col
                 break
-        except:
+        except Exception:
             continue
             
     if target_col is not None:
@@ -115,6 +107,8 @@ def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
     options = {"Brak (0 USD)": 0.0}
     target_col = None
     
+    if len(df_maszty) < 2: return options
+    
     for col in range(1, len(df_maszty.columns)):
         try:
             val_sections = str(df_maszty.iloc[0, col]).strip()
@@ -122,7 +116,7 @@ def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
             if val_sections == str(sections) and val_tonnage == str(tonnage):
                 target_col = col
                 break
-        except:
+        except Exception:
             continue
             
     if target_col is not None:

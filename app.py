@@ -37,32 +37,26 @@ def load_all_data():
     file_name = "KONFIGURATOR CEN TRUCK MOTOR 14.09.2026 (spalinowe i elektryczne wózki czołowe).xlsm"
     data = {}
     try:
-        # Wczytujemy wózki
         data['wozki'] = pd.read_excel(file_name, sheet_name="Baza_Wozki", engine="openpyxl")
-        
-        # Wczytujemy surowe tabele
         data['maszty_raw'] = pd.read_excel(file_name, sheet_name="Baza_Maszty", header=None, engine="openpyxl")
         data['opony_raw'] = pd.read_excel(file_name, sheet_name="Baza_Opony", header=None, engine="openpyxl")
         data['kabiny_raw'] = pd.read_excel(file_name, sheet_name="Baza_Kabina", header=None, engine="openpyxl")
         data['widly_raw'] = pd.read_excel(file_name, sheet_name="Baza_Widły", header=None, engine="openpyxl")
-        
+        data['osprzet_raw'] = pd.read_excel(file_name, sheet_name="Baza_Osprzęt", header=None, engine="openpyxl")
         return data
     except Exception as e:
         st.error(f"Błąd odczytu pliku: {e}")
         return None
 
 def get_options_from_raw(df_raw, drive_type, series, tonnage):
-    """Filtruje tabele takie jak Baza_Opony, gdzie wiersz 0 to Napęd, wiersz 1 to Seria, wiersz 2 to Tonaż"""
-    options = {}
-    # Szukamy właściwej kolumny
+    options = {"Brak": 0.0} # Dodajemy domyślną opcję braku dopłaty
     target_col = None
+    
     for col in range(1, len(df_raw.columns)):
         try:
             val_drive = str(df_raw.iloc[0, col]).strip()
             val_series = str(df_raw.iloc[1, col]).strip()
             val_tonnage = str(df_raw.iloc[2, col]).strip()
-            
-            # Weryfikacja
             if (val_drive == str(drive_type) and val_series == str(series) and val_tonnage == str(tonnage)):
                 target_col = col
                 break
@@ -78,14 +72,13 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage):
     return options
 
 def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
-    """Filtruje Baza_Maszty, gdzie wiersz 0 to ilość sekcji, a wiersz 1 to Tonaż"""
-    options = {}
+    options = {"Brak": 0.0}
     target_col = None
+    
     for col in range(1, len(df_maszty.columns)):
         try:
             val_sections = str(df_maszty.iloc[0, col]).strip()
             val_tonnage = str(df_maszty.iloc[1, col]).strip()
-            
             if val_sections == str(sections) and val_tonnage == str(tonnage):
                 target_col = col
                 break
@@ -163,37 +156,46 @@ def view_calculator():
         dostepne_modele = df_wozki[df_wozki['Typ Napędu'] == typ_napedu]['Model Wózka'].dropna().tolist()
         model = c2.selectbox("Wybierz model wózka:", dostepne_modele)
         
-        # Pobieranie kluczowych parametrów wybranego wózka
+        # Parametry wózka
         wiersz_wozka = df_wozki[df_wozki['Model Wózka'] == model].iloc[0]
         base_price_usd = float(wiersz_wozka['Cena Bazowa (USD)'])
         grupa_tonazowa = str(wiersz_wozka['Grupa Tonażowa']).strip()
         seria = str(wiersz_wozka['Seria']).strip()
         
-        # Ściąganie dostępnych opcji z bazy
-        maszty_dict = get_mast_options(db['maszty_raw'], grupa_tonazowa, "3 sekcje") # docelowo można dodać wybór sekcji
+        st.markdown("### Maszt i Hydraulika")
+        c3_0 = st.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
+        
+        # Pobieranie opcji na bazie wybranego wózka
+        maszty_dict = get_mast_options(db['maszty_raw'], grupa_tonazowa, c3_0)
         opony_dict = get_options_from_raw(db['opony_raw'], typ_napedu, seria, grupa_tonazowa)
         kabiny_dict = get_options_from_raw(db['kabiny_raw'], typ_napedu, seria, grupa_tonazowa)
         widly_dict = get_options_from_raw(db['widly_raw'], typ_napedu, seria, grupa_tonazowa)
+        osprzet_dict = get_options_from_raw(db['osprzet_raw'], typ_napedu, seria, grupa_tonazowa)
 
-        st.markdown("### Maszt i Hydraulika")
         c3, c4, c5 = st.columns(3)
-        lista_masztow = list(maszty_dict.keys()) if maszty_dict else ["Brak masztów dla tego modelu w bazie"]
+        lista_masztow = list(maszty_dict.keys())
         maszt = c3.selectbox("Typ i wysokość masztu:", lista_masztow)
         
-        lista_widel = list(widly_dict.keys()) if widly_dict else ["Brak wideł w bazie"]
+        lista_widel = list(widly_dict.keys())
         widly = c4.selectbox("Wymiar wideł:", lista_widel)
         
-        osprzet = c5.selectbox("Osprzęt:", ["Brak", "Zintegrowany przesuw boczny", "Pozycjoner", "Obrotnica"])
+        lista_osprzetu = list(osprzet_dict.keys())
+        osprzet = c5.selectbox("Osprzęt:", lista_osprzetu)
         
         st.markdown("### Wyposażenie dodatkowe")
         c6, c7 = st.columns(2)
         
-        lista_kabin = list(kabiny_dict.keys()) if kabiny_dict else ["Brak opcji kabiny"]
+        lista_kabin = list(kabiny_dict.keys())
         kabina = c6.selectbox("Opcje kabiny:", lista_kabin)
         
-        lista_opon = list(opony_dict.keys()) if opony_dict else ["Brak opcji opon"]
+        lista_opon = list(opony_dict.keys())
         opony = c7.selectbox("Rodzaj opon:", lista_opon)
         
+        c8, c9 = st.columns(2)
+        # Opcje zablokowane wizualnie na tym etapie MVP (możemy podłączyć analogicznie do bazy później)
+        oswietlenie = c8.selectbox("Oświetlenie (Przykładowe):", ["Standard LED", "LED + Blue Spot Tył", "LED + Blue Spot Przód i Tył"])
+        uruchamianie = c9.selectbox("Opcje uruchamiania (Przykładowe):", ["Kluczyk (Standard)", "Karta RFID", "Kod PIN"])
+
         if "Elektryczny" in str(typ_napedu):
             st.markdown("### Zasilanie")
             c10, c11 = st.columns(2)
@@ -213,8 +215,9 @@ def view_calculator():
         opony_price = opony_dict.get(opony, 0)
         kabina_price = kabiny_dict.get(kabina, 0)
         widly_price = widly_dict.get(widly, 0)
+        osprzet_price = osprzet_dict.get(osprzet, 0)
         
-        suma_opcji_usd = maszt_price + opony_price + kabina_price + widly_price
+        suma_opcji_usd = maszt_price + opony_price + kabina_price + widly_price + osprzet_price
         total_usd = base_price_usd + suma_opcji_usd
         total_pln = (total_usd * kurs_usd) + marza_kwotowa
         
@@ -224,6 +227,10 @@ def view_calculator():
             st.write(f"Tonaż: **{grupa_tonazowa}** | Seria: **{seria}**")
             st.write(f"Baza (Fabryka): **{base_price_usd:,.2f} USD**")
             st.write(f"Opcje (Fabryka): **{suma_opcji_usd:,.2f} USD**")
+            st.write(f"- Maszt: {maszt_price} USD")
+            st.write(f"- Opony: {opony_price} USD")
+            st.write(f"- Osprzęt: {osprzet_price} USD")
+            st.write(f"- Kabina: {kabina_price} USD")
             st.write("---")
         elif role == "Dealer":
             st.write("*(Szczegóły składowe są zastrzeżone)*")

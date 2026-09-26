@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 # -----------------------------------------
-# KONFIGURACJA STRONY I WYGLĄDU (Szerokie listy)
+# KONFIGURACJA STRONY I WYGLĄDU
 # -----------------------------------------
 st.set_page_config(page_title="Kalkulator Heli - Truck Motor", layout="wide", initial_sidebar_state="expanded")
 
@@ -12,21 +12,32 @@ st.markdown("""
     .stApp { background-color: #f4f4f4; color: #111111; }
     label { font-weight: 700 !important; color: #111111 !important; font-size: 14px !important; margin-bottom: -5px; }
     
-    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { 
+    .stTextInput input, .stNumberInput input { 
         border: 1px solid #777 !important; 
         background-color: #ffffff !important; 
         color: #000000 !important; 
     }
     
-    /* ROZSZERZENIE LISTY ROZWIJANEJ - Lista dopasowuje się do najdłuższego tekstu */
-    div[data-baseweb="popover"] > div {
-        width: max-content !important;
-        max-width: 95vw !important; 
+    /* POZIOME PRZEWIJANIE ZAMIAST ZAWIJANIA W SELECTBOXACH */
+    div[data-baseweb="select"] {
+        border: 1px solid #777 !important;
+        background-color: #ffffff !important;
     }
-    ul[role="listbox"] {
-        width: max-content !important;
+    div[data-baseweb="select"] > div {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
     }
-    ul[role="listbox"] li {
+    div[data-baseweb="select"] div, div[data-baseweb="select"] span {
+        white-space: nowrap !important;
+    }
+    
+    /* Rozwijana lista opcji z paskiem przewijania */
+    div[data-baseweb="popover"] ul {
+        max-height: 60vh !important;
+        overflow-x: auto !important;
+    }
+    div[data-baseweb="popover"] li {
         white-space: nowrap !important;
         padding-right: 30px !important;
     }
@@ -75,9 +86,6 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data
     if data_end_row is None:
         data_end_row = len(df_raw)
         
-    if header_row + 2 >= len(df_raw):
-        return options
-        
     for col in range(1, len(df_raw.columns)):
         try:
             val_drive = str(df_raw.iloc[header_row, col]).strip()
@@ -86,7 +94,7 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data
             if (val_drive == str(drive_type) and val_series == str(series) and val_tonnage == str(tonnage)):
                 target_col = col
                 break
-        except Exception:
+        except:
             continue
             
     if target_col is not None:
@@ -107,8 +115,6 @@ def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
     options = {"Brak (0 USD)": 0.0}
     target_col = None
     
-    if len(df_maszty) < 2: return options
-    
     for col in range(1, len(df_maszty.columns)):
         try:
             val_sections = str(df_maszty.iloc[0, col]).strip()
@@ -116,7 +122,7 @@ def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
             if val_sections == str(sections) and val_tonnage == str(tonnage):
                 target_col = col
                 break
-        except Exception:
+        except:
             continue
             
     if target_col is not None:
@@ -211,7 +217,8 @@ def view_calculator():
         ops_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=0, data_start_row=3, data_end_row=7)
         kluczyk_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=8, data_start_row=11, data_end_row=None)
 
-        c3, c4, c5 = st.columns(3)
+        # Zmiana szerokości: Maszt (2.5), Widły (1), Osprzęt (3.5)
+        c3, c4, c5 = st.columns([2.5, 1, 3.5])
         maszt = c3.selectbox("Typ i wysokość masztu:", list(maszty_dict.keys()))
         widly = c4.selectbox("Wymiar wideł:", list(widly_dict.keys()))
         osprzet = c5.selectbox("Osprzęt:", list(osprzet_dict.keys()))
@@ -221,7 +228,8 @@ def view_calculator():
         kabina = c6.selectbox("Opcje kabiny:", list(kabiny_dict.keys()))
         opony = c7.selectbox("Rodzaj opon:", list(opony_dict.keys()))
         
-        c8, c9, c10 = st.columns(3)
+        # Zmiana szerokości: Oświetlenie (4), OPS (2), Uruchamianie (2)
+        c8, c9, c10 = st.columns([4, 2, 2])
         oswietlenie = c8.selectbox("Oświetlenie:", list(oswietlenie_dict.keys()))
         ops = c9.selectbox("Systemy Bezpieczeństwa (OPS):", list(ops_dict.keys()))
         uruchamianie = c10.selectbox("Opcje uruchamiania (Kluczyk):", list(kluczyk_dict.keys()))

@@ -77,10 +77,10 @@ def login_screen():
     # Logo na ekranie logowania
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if os.path.exists("AUTORYZOWANY DYSTYBUTOR.jpg"):
-            st.image("AUTORYZOWANY DYSTYBUTOR.jpg", use_column_width=True)
+        if os.path.exists("AUTORYZOWANY DYSTYBUTOR.png"):
+            st.image("AUTORYZOWANY DYSTYBUTOR.png", use_column_width=True)
         else:
-            st.warning("Brak pliku AUTORYZOWANY DYSTYBUTOR.jpg na serwerze.")
+            st.warning("Brak pliku AUTORYZOWANY DYSTYBUTOR.png na serwerze.")
             
         st.title("System Wycen Wózków HELI")
         st.write("Wprowadź swoje dane, aby uzyskać dostęp do kalkulatora.")

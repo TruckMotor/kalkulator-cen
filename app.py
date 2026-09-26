@@ -12,7 +12,7 @@ st.markdown("""
     .stApp { background-color: #f4f4f4; color: #111111; }
     
     /* Pogrubione, czytelne etykiety nad polami */
-    label { font-weight: 700 !important; color: #111111 !important; font-size: 14px !important; }
+    label { font-weight: 700 !important; color: #111111 !important; font-size: 14px !important; margin-bottom: -5px; }
     
     /* Wyraźne białe pola do wpisywania z ciemną ramką */
     .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { 
@@ -35,7 +35,7 @@ st.markdown("""
     }
     
     /* Nagłówki w kolorze czerwonym */
-    h1, h2, h3 { color: #CC0000; font-family: 'Arial', sans-serif; }
+    h1, h2, h3 { color: #CC0000; font-family: 'Arial', sans-serif; margin-bottom: 5px; margin-top: 15px;}
     
     /* Pudełko z ceną */
     .price-box { padding: 20px; background-color: #ffffff; border-left: 5px solid #CC0000; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-size: 24px; font-weight: bold; margin-bottom: 20px;}
@@ -74,7 +74,6 @@ if 'logged_in' not in st.session_state:
 # WIDOK LOGOWANIA 
 # -----------------------------------------
 def login_screen():
-    # Logo na ekranie logowania - dodane zabezpieczenie try-except
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if os.path.exists("AUTORYZOWANY DYSTYBUTOR.png"):
@@ -115,37 +114,44 @@ def view_calculator():
         st.error("Brak połączenia z plikiem Excel. Wgraj plik .xlsm.")
         return
 
-    col1, col2 = st.columns([2, 1])
+    # Proporcje układu: 70% na konfigurator (skompresowany) / 30% na wyniki
+    col1, col2 = st.columns([7, 3])
     
     with col1:
         st.subheader("Konfiguracja specyfikacji")
         
-        st.markdown("### 1. Baza wózka")
+        st.markdown("### Baza wózka")
+        c1, c2 = st.columns(2)
         dostepne_napedy = df_wozki['Typ Napędu'].dropna().unique().tolist()
-        typ_napedu = st.selectbox("Wybierz typ napędu:", dostepne_napedy)
-        
+        typ_napedu = c1.selectbox("Wybierz typ napędu:", dostepne_napedy)
         dostepne_modele = df_wozki[df_wozki['Typ Napędu'] == typ_napedu]['Model Wózka'].dropna().tolist()
-        model = st.selectbox("Wybierz model wózka:", dostepne_modele)
+        model = c2.selectbox("Wybierz model wózka:", dostepne_modele)
         
-        st.markdown("### 2. Maszt i Hydraulika")
-        maszt = st.selectbox("Typ i wysokość masztu:", ["Standard (M300) - 3.0m", "Triplex (ZSM470) - 4.7m", "Triplex (ZSM600) - 6.0m"])
-        sekcje = st.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
-        osprzet = st.selectbox("Osprzęt wideł:", ["Brak (standardowe widły)", "Zintegrowany przesuw boczny", "Pozycjoner wideł z przesuwem", "Obrotnica", "Uchwyt do bel"])
+        st.markdown("### Maszt i Hydraulika")
+        c3, c4, c5 = st.columns(3)
+        maszt = c3.selectbox("Typ i wysokość masztu:", ["Standard (M300) - 3.0m", "Triplex (ZSM470) - 4.7m", "Triplex (ZSM600) - 6.0m"])
+        sekcje = c4.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
+        osprzet = c5.selectbox("Osprzęt wideł:", ["Brak (standard)", "Zintegrowany przesuw boczny", "Pozycjoner wideł z przesuwem", "Obrotnica", "Uchwyt do bel"])
         
-        st.markdown("### 3. Wyposażenie dodatkowe")
-        kabina = st.selectbox("Opcje kabiny:", ["Brak (tylko daszek)", "Półkabina (szyba przód/tył)", "Pełna kabina ogrzewana", "Pełna kabina z klimatyzacją"])
-        opony = st.selectbox("Rodzaj opon:", ["Pneumatyczne (Standard)", "Pełne (Superelastyczne)", "Niebrudzące (Non-marking)"])
-        oswietlenie = st.selectbox("Oświetlenie (LED / Blue Spot):", ["Standard LED", "LED + Blue Spot Tył", "LED + Blue Spot Przód i Tył"])
-        uruchamianie = st.selectbox("Opcje uruchamiania (OPS):", ["Kluczyk (Standard)", "Karta RFID", "Kod PIN", "Czujnik obecności operatora (OPS)"])
+        st.markdown("### Wyposażenie dodatkowe")
+        c6, c7 = st.columns(2)
+        kabina = c6.selectbox("Opcje kabiny:", ["Brak (tylko daszek)", "Półkabina", "Pełna ogrzewana", "Pełna klimatyzacja"])
+        opony = c7.selectbox("Rodzaj opon:", ["Pneumatyczne (Standard)", "Pełne (Superelastyczne)", "Niebrudzące (Non-marking)"])
+        
+        c8, c9 = st.columns(2)
+        oswietlenie = c8.selectbox("Oświetlenie (LED / Blue Spot):", ["Standard LED", "LED + Blue Spot Tył", "LED + Blue Spot Przód i Tył"])
+        uruchamianie = c9.selectbox("Opcje uruchamiania (OPS):", ["Kluczyk (Standard)", "Karta RFID", "Kod PIN", "Czujnik obecności operatora (OPS)"])
 
         if "Elektryczny" in str(typ_napedu):
-            st.markdown("### 4. Zasilanie (Bateria i Ładowarka)")
-            bateria = st.selectbox("Pojemność i typ baterii:", ["Standardowa Li-Ion 80V/280Ah", "Powiększona Li-Ion 80V/404Ah", "Powiększona Li-Ion 80V/542Ah"])
-            ladowarka = st.selectbox("Typ ładowarki:", ["Standardowa (zintegrowana)", "Zewnętrzna (szybka)"])
+            st.markdown("### Zasilanie")
+            c10, c11 = st.columns(2)
+            bateria = c10.selectbox("Pojemność i typ baterii:", ["Standardowa Li-Ion 80V/280Ah", "Powiększona Li-Ion 80V/404Ah", "Powiększona Li-Ion 80V/542Ah"])
+            ladowarka = c11.selectbox("Typ ładowarki:", ["Standardowa (zintegrowana)", "Zewnętrzna (szybka)"])
 
-        st.markdown("### 5. Koszty i Narzuty")
-        kurs_usd = st.number_input("Aktualny Kurs USD/PLN:", value=4.00, step=0.01)
-        marza_kwotowa = st.number_input("Twój narzut / Marża handlowca (w PLN):", value=0, step=100)
+        st.markdown("### Koszty i Narzuty")
+        c12, c13 = st.columns(2)
+        kurs_usd = c12.number_input("Aktualny Kurs USD/PLN:", value=4.00, step=0.01)
+        marza_kwotowa = c13.number_input("Twój narzut / Marża (w PLN):", value=0, step=100)
 
     with col2:
         st.subheader("Wycena końcowa")
@@ -155,26 +161,26 @@ def view_calculator():
         
         suma_opcji_usd = 0
         if "Triplex 4.7m" in maszt: suma_opcji_usd += 1160
-        if "Pełna kabina" in kabina: suma_opcji_usd += 1500
+        if "Pełna" in kabina: suma_opcji_usd += 1500
         
         total_usd = base_price_usd + suma_opcji_usd
         total_pln = (total_usd * kurs_usd) + marza_kwotowa
         
         if role in ["Administrator", "Menedżer", "Handlowiec"]:
             st.write("---")
-            st.write("**Detale wewnętrzne (Niewidoczne dla Dealera):**")
-            st.write(f"Grupa tonażowa: {grupa_tonazowa}")
-            st.write(f"Baza (Fabryka): {base_price_usd:,.2f} USD")
-            st.write(f"Opcje (Fabryka): {suma_opcji_usd:,.2f} USD")
+            st.write("**Detale wewnętrzne:**")
+            st.write(f"Grupa tonażowa: **{grupa_tonazowa}**")
+            st.write(f"Baza (Fabryka): **{base_price_usd:,.2f} USD**")
+            st.write(f"Opcje (Fabryka): **{suma_opcji_usd:,.2f} USD**")
             st.write("---")
         elif role == "Dealer":
             st.write("*(Szczegóły składowe są zastrzeżone)*")
             
         st.markdown(f'<div class="price-box">Cena netto klienta:<br>{total_pln:,.2f} PLN<br><span style="font-size:14px; font-weight:normal;">(Zawiera narzut: {marza_kwotowa} PLN)</span></div>', unsafe_allow_html=True)
         
-        st.button("Skopiuj konfigurację do e-maila")
-        st.button("Zapisz wycenę do archiwum")
-        st.button("Pobierz PDF dla klienta")
+        st.button("Skopiuj konfigurację do e-maila", use_container_width=True)
+        st.button("Zapisz wycenę do archiwum", use_container_width=True)
+        st.button("Pobierz PDF dla klienta", use_container_width=True)
 
 def view_manage_users():
     st.header("Zarządzanie Użytkownikami")
@@ -231,7 +237,6 @@ def view_change_password():
 # -----------------------------------------
 def main_app():
     with st.sidebar:
-        # Logo w panelu bocznym - zabezpieczenie try-except
         if os.path.exists("AUTORYZOWANY DYSTYBUTOR.png"):
             try:
                 st.image("AUTORYZOWANY DYSTYBUTOR.png", use_container_width=True)
@@ -255,7 +260,6 @@ def main_app():
         
         choice = st.radio("Menu Główne:", menu_options)
         
-    # Przełączanie widoków
     if choice == "Kalkulator Cen":
         view_calculator()
     elif choice == "Archiwum Wyliczeń":

@@ -72,7 +72,13 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage):
             option_name = str(df_raw.iloc[row, 0]).strip()
             price = df_raw.iloc[row, target_col]
             if pd.notna(price) and str(price).strip() != 'nan' and option_name != 'nan':
-                options[option_name] = float(price)
+                try:
+                    # Bezpieczna konwersja na wartość liczbową (zamiana przecinka na kropkę)
+                    price_val = float(str(price).replace(',', '.').strip())
+                    options[option_name] = price_val
+                except ValueError:
+                    # Ignorowanie myślników, tekstu lub spacji w cenniku (opcja niedostępna)
+                    continue
     return options
 
 def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
@@ -94,7 +100,11 @@ def get_mast_options(df_maszty, tonnage, sections="3 sekcje"):
             mast_name = str(df_maszty.iloc[row, 0]).strip()
             price = df_maszty.iloc[row, target_col]
             if pd.notna(price) and str(price).strip() != 'nan' and mast_name != 'nan':
-                options[mast_name] = float(price)
+                try:
+                    price_val = float(str(price).replace(',', '.').strip())
+                    options[mast_name] = price_val
+                except ValueError:
+                    continue
     return options
 
 # -----------------------------------------
@@ -191,7 +201,6 @@ def view_calculator():
         oswietlenie = c8.selectbox("Oświetlenie:", list(oswietlenie_dict.keys()))
         uruchamianie = c9.selectbox("Uruchamianie i systemy OPS:", list(ops_dict.keys()))
 
-        # BATERIE TYLKO DLA ELEKTRYKÓW
         bateria_price, ladowarka_price = 0, 0
         if "Elektryczny" in str(typ_napedu):
             st.markdown("### Zasilanie")

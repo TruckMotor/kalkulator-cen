@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 # -----------------------------------------
-# KONFIGURACJA STRONY I WYGLĄDU (Zawijanie tekstu + kolory)
+# KONFIGURACJA STRONY I WYGLĄDU (Agresywne zawijanie tekstu)
 # -----------------------------------------
 st.set_page_config(page_title="Kalkulator Heli - Truck Motor", layout="wide", initial_sidebar_state="expanded")
 
@@ -12,29 +12,48 @@ st.markdown("""
     .stApp { background-color: #f4f4f4; color: #111111; }
     label { font-weight: 700 !important; color: #111111 !important; font-size: 14px !important; margin-bottom: -5px; }
     
-    /* Wyraźne białe pola do wpisywania */
-    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { 
+    .stTextInput input, .stNumberInput input { 
         border: 1px solid #777 !important; 
         background-color: #ffffff !important; 
         color: #000000 !important; 
     }
     
-    /* ZAWIJANIE TEKSTU W LISTACH ROZWIJANYCH (SELECTBOX) */
-    ul[role="listbox"] li {
+    /* GŁĘBOKIE WYMUSZENIE ZAWIJANIA W SELECTBOXACH */
+    /* 1. Wybrana wartość w polu */
+    div[data-baseweb="select"] {
+        border: 1px solid #777 !important;
+        background-color: #ffffff !important;
+    }
+    div[data-baseweb="select"] > div {
+        height: auto !important;
+        min-height: 40px !important;
+    }
+    div[data-baseweb="select"] div, div[data-baseweb="select"] span {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* 2. Rozwijana lista opcji */
+    div[data-baseweb="popover"] ul {
+        max-height: 60vh !important;
+    }
+    div[data-baseweb="popover"] li {
         white-space: normal !important;
         height: auto !important;
         min-height: 40px !important;
-        padding-top: 8px !important;
-        padding-bottom: 8px !important;
-        line-height: 1.3 !important;
+        padding: 10px !important;
+        line-height: 1.4 !important;
+        align-items: flex-start !important;
     }
-    div[data-baseweb="select"] > div {
+    div[data-baseweb="popover"] li span {
         white-space: normal !important;
-        height: auto !important;
-        min-height: 38px !important;
+        display: inline-block !important;
+        width: 100% !important;
     }
     
-    /* Przyciski */
+    /* Przyciski i Nagłówki */
     .stButton>button { 
         background-color: #CC0000 !important; 
         color: #FFFFFF !important; 
@@ -78,7 +97,6 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data
     if data_end_row is None:
         data_end_row = len(df_raw)
         
-    # Szukamy kolumny po nagłówkach (w odpowiednich wierszach)
     for col in range(1, len(df_raw.columns)):
         try:
             val_drive = str(df_raw.iloc[header_row, col]).strip()
@@ -90,7 +108,6 @@ def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data
         except:
             continue
             
-    # Odczytywanie cen z wybranej sekcji
     if target_col is not None:
         for row in range(data_start_row, data_end_row):
             if row >= len(df_raw): break
@@ -202,15 +219,12 @@ def view_calculator():
         st.markdown("### Maszt i Hydraulika")
         c3_0 = st.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
         
-        # Pobieranie słowników opcji
         maszty_dict = get_mast_options(db['maszty_raw'], grupa_tonazowa, c3_0)
         opony_dict = get_options_from_raw(db['opony_raw'], typ_napedu, seria, grupa_tonazowa)
         kabiny_dict = get_options_from_raw(db['kabiny_raw'], typ_napedu, seria, grupa_tonazowa)
         widly_dict = get_options_from_raw(db['widly_raw'], typ_napedu, seria, grupa_tonazowa)
         osprzet_dict = get_options_from_raw(db['osprzet_raw'], typ_napedu, seria, grupa_tonazowa)
         oswietlenie_dict = get_options_from_raw(db['oswietlenie_raw'], typ_napedu, seria, grupa_tonazowa)
-        
-        # W jednej zakładce (Baza_OPS+kay) znajdują się dwie oddzielne tabele. Dzielimy je po numerach wierszy.
         ops_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=0, data_start_row=3, data_end_row=7)
         kluczyk_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=8, data_start_row=11, data_end_row=None)
 
@@ -250,7 +264,6 @@ def view_calculator():
     with col2:
         st.subheader("Wycena końcowa")
         
-        # Wyliczanie cen z cenników
         maszt_price = maszty_dict.get(maszt, 0)
         opony_price = opony_dict.get(opony, 0)
         kabina_price = kabiny_dict.get(kabina, 0)

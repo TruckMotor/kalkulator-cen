@@ -18,6 +18,13 @@ st.markdown("""
         color: #000000 !important; 
     }
     
+    /* Zablokowane pola (szare, wyraźne litery) */
+    input:disabled {
+        background-color: #e9ecef !important;
+        color: #333333 !important;
+        cursor: not-allowed;
+    }
+    
     /* POZIOME PRZEWIJANIE ZAMIAST ZAWIJANIA W SELECTBOXACH */
     div[data-baseweb="select"] {
         border: 1px solid #777 !important;
@@ -32,7 +39,6 @@ st.markdown("""
         white-space: nowrap !important;
     }
     
-    /* Rozwijana lista opcji z paskiem przewijania */
     div[data-baseweb="popover"] ul {
         max-height: 60vh !important;
         overflow-x: auto !important;
@@ -217,7 +223,6 @@ def view_calculator():
         ops_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=0, data_start_row=3, data_end_row=7)
         kluczyk_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=8, data_start_row=11, data_end_row=None)
 
-        # Zmiana szerokości: Maszt (2.5), Widły (1), Osprzęt (3.5)
         c3, c4, c5 = st.columns([2.5, 1, 3.5])
         maszt = c3.selectbox("Typ i wysokość masztu:", list(maszty_dict.keys()))
         widly = c4.selectbox("Wymiar wideł:", list(widly_dict.keys()))
@@ -228,11 +233,20 @@ def view_calculator():
         kabina = c6.selectbox("Opcje kabiny:", list(kabiny_dict.keys()))
         opony = c7.selectbox("Rodzaj opon:", list(opony_dict.keys()))
         
-        # Zmiana szerokości: Oświetlenie (4), OPS (2), Uruchamianie (2)
         c8, c9, c10 = st.columns([4, 2, 2])
         oswietlenie = c8.selectbox("Oświetlenie:", list(oswietlenie_dict.keys()))
-        ops = c9.selectbox("Systemy Bezpieczeństwa (OPS):", list(ops_dict.keys()))
-        uruchamianie = c10.selectbox("Opcje uruchamiania (Kluczyk):", list(kluczyk_dict.keys()))
+        
+        # Domyślne wybieranie "FULL OPS" jeśli jest dostępne
+        ops_list = list(ops_dict.keys())
+        default_ops_idx = next((i for i, v in enumerate(ops_list) if "FULL OPS" in v.upper()), 0)
+        ops = c9.selectbox("Systemy Bezpieczeństwa (OPS):", ops_list, index=default_ops_idx)
+        
+        # Automatyczne zaciąganie kluczyka przypisanego do wózka (pole zablokowane do edycji)
+        valid_keys = [k for k in kluczyk_dict.keys() if "Brak" not in k]
+        uruchamianie = valid_keys[0] if valid_keys else "Brak (0 USD)"
+        kluczyk_price = kluczyk_dict.get(uruchamianie, 0.0)
+        
+        c10.text_input("Uruchamianie (Auto):", value=uruchamianie, disabled=True)
 
         bateria_price, ladowarka_price = 0, 0
         if "Elektryczny" in str(typ_napedu):
@@ -262,7 +276,7 @@ def view_calculator():
         osprzet_price = osprzet_dict.get(osprzet, 0)
         oswietlenie_price = oswietlenie_dict.get(oswietlenie, 0)
         ops_price = ops_dict.get(ops, 0)
-        kluczyk_price = kluczyk_dict.get(uruchamianie, 0)
+        # kluczyk_price jest już zdefiniowane powyżej
         
         suma_opcji_usd = (maszt_price + opony_price + kabina_price + widly_price + 
                           osprzet_price + oswietlenie_price + ops_price + kluczyk_price + 

@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 # -----------------------------------------
-# KONFIGURACJA STRONY I WYGLĄDU 
+# KONFIGURACJA STRONY I WYGLĄDU (Zawijanie tekstu + kolory)
 # -----------------------------------------
 st.set_page_config(page_title="Kalkulator Heli - Truck Motor", layout="wide", initial_sidebar_state="expanded")
 
@@ -11,11 +11,30 @@ st.markdown("""
     <style>
     .stApp { background-color: #f4f4f4; color: #111111; }
     label { font-weight: 700 !important; color: #111111 !important; font-size: 14px !important; margin-bottom: -5px; }
+    
+    /* Wyraźne białe pola do wpisywania */
     .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { 
         border: 1px solid #777 !important; 
         background-color: #ffffff !important; 
         color: #000000 !important; 
     }
+    
+    /* ZAWIJANIE TEKSTU W LISTACH ROZWIJANYCH (SELECTBOX) */
+    ul[role="listbox"] li {
+        white-space: normal !important;
+        height: auto !important;
+        min-height: 40px !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+        line-height: 1.3 !important;
+    }
+    div[data-baseweb="select"] > div {
+        white-space: normal !important;
+        height: auto !important;
+        min-height: 38px !important;
+    }
+    
+    /* Przyciski */
     .stButton>button { 
         background-color: #CC0000 !important; 
         color: #FFFFFF !important; 
@@ -52,32 +71,37 @@ def load_all_data():
         st.error(f"Błąd odczytu pliku: {e}")
         return None
 
-def get_options_from_raw(df_raw, drive_type, series, tonnage):
+def get_options_from_raw(df_raw, drive_type, series, tonnage, header_row=0, data_start_row=3, data_end_row=None):
     options = {"Brak (0 USD)": 0.0} 
     target_col = None
     
+    if data_end_row is None:
+        data_end_row = len(df_raw)
+        
+    # Szukamy kolumny po nagłówkach (w odpowiednich wierszach)
     for col in range(1, len(df_raw.columns)):
         try:
-            val_drive = str(df_raw.iloc[0, col]).strip()
-            val_series = str(df_raw.iloc[1, col]).strip()
-            val_tonnage = str(df_raw.iloc[2, col]).strip()
+            val_drive = str(df_raw.iloc[header_row, col]).strip()
+            val_series = str(df_raw.iloc[header_row+1, col]).strip()
+            val_tonnage = str(df_raw.iloc[header_row+2, col]).strip()
             if (val_drive == str(drive_type) and val_series == str(series) and val_tonnage == str(tonnage)):
                 target_col = col
                 break
         except:
             continue
             
+    # Odczytywanie cen z wybranej sekcji
     if target_col is not None:
-        for row in range(3, len(df_raw)):
+        for row in range(data_start_row, data_end_row):
+            if row >= len(df_raw): break
             option_name = str(df_raw.iloc[row, 0]).strip()
             price = df_raw.iloc[row, target_col]
+            
             if pd.notna(price) and str(price).strip() != 'nan' and option_name != 'nan':
                 try:
-                    # Bezpieczna konwersja na wartość liczbową (zamiana przecinka na kropkę)
                     price_val = float(str(price).replace(',', '.').strip())
                     options[option_name] = price_val
                 except ValueError:
-                    # Ignorowanie myślników, tekstu lub spacji w cenniku (opcja niedostępna)
                     continue
     return options
 
@@ -178,14 +202,17 @@ def view_calculator():
         st.markdown("### Maszt i Hydraulika")
         c3_0 = st.selectbox("Ilość sekcji rozdzielacza:", ["3 sekcje", "4 sekcje"])
         
-        # Pobieranie opcji z bazy
+        # Pobieranie słowników opcji
         maszty_dict = get_mast_options(db['maszty_raw'], grupa_tonazowa, c3_0)
         opony_dict = get_options_from_raw(db['opony_raw'], typ_napedu, seria, grupa_tonazowa)
         kabiny_dict = get_options_from_raw(db['kabiny_raw'], typ_napedu, seria, grupa_tonazowa)
         widly_dict = get_options_from_raw(db['widly_raw'], typ_napedu, seria, grupa_tonazowa)
         osprzet_dict = get_options_from_raw(db['osprzet_raw'], typ_napedu, seria, grupa_tonazowa)
         oswietlenie_dict = get_options_from_raw(db['oswietlenie_raw'], typ_napedu, seria, grupa_tonazowa)
-        ops_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa)
+        
+        # W jednej zakładce (Baza_OPS+kay) znajdują się dwie oddzielne tabele. Dzielimy je po numerach wierszy.
+        ops_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=0, data_start_row=3, data_end_row=7)
+        kluczyk_dict = get_options_from_raw(db['ops_raw'], typ_napedu, seria, grupa_tonazowa, header_row=8, data_start_row=11, data_end_row=None)
 
         c3, c4, c5 = st.columns(3)
         maszt = c3.selectbox("Typ i wysokość masztu:", list(maszty_dict.keys()))
@@ -197,9 +224,10 @@ def view_calculator():
         kabina = c6.selectbox("Opcje kabiny:", list(kabiny_dict.keys()))
         opony = c7.selectbox("Rodzaj opon:", list(opony_dict.keys()))
         
-        c8, c9 = st.columns(2)
+        c8, c9, c10 = st.columns(3)
         oswietlenie = c8.selectbox("Oświetlenie:", list(oswietlenie_dict.keys()))
-        uruchamianie = c9.selectbox("Uruchamianie i systemy OPS:", list(ops_dict.keys()))
+        ops = c9.selectbox("Systemy Bezpieczeństwa (OPS):", list(ops_dict.keys()))
+        uruchamianie = c10.selectbox("Opcje uruchamiania (Kluczyk):", list(kluczyk_dict.keys()))
 
         bateria_price, ladowarka_price = 0, 0
         if "Elektryczny" in str(typ_napedu):
@@ -207,31 +235,33 @@ def view_calculator():
             bateria_dict = get_options_from_raw(db['bateria_raw'], typ_napedu, seria, grupa_tonazowa)
             ladowarka_dict = get_options_from_raw(db['ladowarka_raw'], typ_napedu, seria, grupa_tonazowa)
             
-            c10, c11 = st.columns(2)
-            bateria = c10.selectbox("Bateria Li-Ion:", list(bateria_dict.keys()))
-            ladowarka = c11.selectbox("Ładowarka:", list(ladowarka_dict.keys()))
+            c11, c12 = st.columns(2)
+            bateria = c11.selectbox("Bateria Li-Ion / Kwasowa:", list(bateria_dict.keys()))
+            ladowarka = c12.selectbox("Ładowarka:", list(ladowarka_dict.keys()))
             
             bateria_price = bateria_dict.get(bateria, 0)
             ladowarka_price = ladowarka_dict.get(ladowarka, 0)
 
         st.markdown("### Koszty i Narzuty")
-        c12, c13 = st.columns(2)
-        kurs_usd = c12.number_input("Aktualny Kurs USD/PLN:", value=4.00, step=0.01)
-        marza_kwotowa = c13.number_input("Twój narzut (w PLN):", value=0, step=100)
+        c13, c14 = st.columns(2)
+        kurs_usd = c13.number_input("Aktualny Kurs USD/PLN:", value=4.00, step=0.01)
+        marza_kwotowa = c14.number_input("Twój narzut (w PLN):", value=0, step=100)
 
     with col2:
         st.subheader("Wycena końcowa")
         
+        # Wyliczanie cen z cenników
         maszt_price = maszty_dict.get(maszt, 0)
         opony_price = opony_dict.get(opony, 0)
         kabina_price = kabiny_dict.get(kabina, 0)
         widly_price = widly_dict.get(widly, 0)
         osprzet_price = osprzet_dict.get(osprzet, 0)
         oswietlenie_price = oswietlenie_dict.get(oswietlenie, 0)
-        ops_price = ops_dict.get(uruchamianie, 0)
+        ops_price = ops_dict.get(ops, 0)
+        kluczyk_price = kluczyk_dict.get(uruchamianie, 0)
         
         suma_opcji_usd = (maszt_price + opony_price + kabina_price + widly_price + 
-                          osprzet_price + oswietlenie_price + ops_price + 
+                          osprzet_price + oswietlenie_price + ops_price + kluczyk_price + 
                           bateria_price + ladowarka_price)
                           
         total_usd = base_price_usd + suma_opcji_usd
@@ -247,7 +277,7 @@ def view_calculator():
             st.write(f"- Opony: {opony_price} USD")
             st.write(f"- Kabina: {kabina_price} USD")
             st.write(f"- Osprzęt i widły: {osprzet_price + widly_price} USD")
-            st.write(f"- Światła i OPS: {oswietlenie_price + ops_price} USD")
+            st.write(f"- Światła, OPS, Kluczyk: {oswietlenie_price + ops_price + kluczyk_price} USD")
             if "Elektryczny" in str(typ_napedu):
                 st.write(f"- Bateria i Ładowarka: {bateria_price + ladowarka_price} USD")
             st.write("---")

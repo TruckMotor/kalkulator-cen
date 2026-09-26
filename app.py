@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import requests
 
 # -----------------------------------------
 # KONFIGURACJA STRONY I WYGLĄDU
@@ -18,7 +19,7 @@ st.markdown("""
         color: #000000 !important; 
     }
     
-    /* Zablokowane pola (szare, wyraźne litery) */
+    /* Zablokowane pola */
     input:disabled {
         background-color: #e9ecef !important;
         color: #333333 !important;
@@ -38,7 +39,6 @@ st.markdown("""
     div[data-baseweb="select"] div, div[data-baseweb="select"] span {
         white-space: nowrap !important;
     }
-    
     div[data-baseweb="popover"] ul {
         max-height: 60vh !important;
         overflow-x: auto !important;
@@ -49,18 +49,25 @@ st.markdown("""
     }
     
     /* Przyciski i Nagłówki */
-    .stButton>button { 
-        background-color: #CC0000 !important; 
-        color: #FFFFFF !important; 
-        border-radius: 5px !important; 
-        border: none !important; 
-        font-weight: bold !important; 
-    }
+    .stButton>button { background-color: #CC0000 !important; color: #FFFFFF !important; border-radius: 5px !important; border: none !important; font-weight: bold !important; }
     .stButton>button:hover { background-color: #990000 !important; color: #FFFFFF !important; }
     h1, h2, h3 { color: #CC0000; font-family: 'Arial', sans-serif; margin-bottom: 5px; margin-top: 15px;}
     .price-box { padding: 20px; background-color: #ffffff; border-left: 5px solid #CC0000; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-size: 24px; font-weight: bold; margin-bottom: 20px;}
     </style>
 """, unsafe_allow_html=True)
+
+# -----------------------------------------
+# FUNKCJA POBIERAJĄCA KURS NBP (Odświeża co 1 godzinę)
+# -----------------------------------------
+@st.cache_data(ttl=3600)
+def fetch_usd_rate():
+    try:
+        response = requests.get("http://api.nbp.pl/api/exchangerates/rates/a/usd/?format=json", timeout=5)
+        data = response.json()
+        return float(data['rates'][0]['mid'])
+    except Exception:
+        # W razie braku internetu lub awarii NBP, zwraca awaryjnie 4.00
+        return 4.00
 
 # -----------------------------------------
 # FUNKCJE WCZYTYWANIA ZŁOŻONEJ BAZY DANYCH
@@ -236,16 +243,13 @@ def view_calculator():
         c8, c9, c10 = st.columns([4, 2, 2])
         oswietlenie = c8.selectbox("Oświetlenie:", list(oswietlenie_dict.keys()))
         
-        # Domyślne wybieranie "FULL OPS" jeśli jest dostępne
         ops_list = list(ops_dict.keys())
         default_ops_idx = next((i for i, v in enumerate(ops_list) if "FULL OPS" in v.upper()), 0)
         ops = c9.selectbox("Systemy Bezpieczeństwa (OPS):", ops_list, index=default_ops_idx)
         
-        # Automatyczne zaciąganie kluczyka przypisanego do wózka (pole zablokowane do edycji)
         valid_keys = [k for k in kluczyk_dict.keys() if "Brak" not in k]
         uruchamianie = valid_keys[0] if valid_keys else "Brak (0 USD)"
         kluczyk_price = kluczyk_dict.get(uruchamianie, 0.0)
-        
         c10.text_input("Uruchamianie (Auto):", value=uruchamianie, disabled=True)
 
         bateria_price, ladowarka_price = 0, 0
@@ -263,8 +267,11 @@ def view_calculator():
 
         st.markdown("### Koszty i Narzuty")
         c13, c14 = st.columns(2)
-        kurs_usd = c13.number_input("Aktualny Kurs USD/PLN:", value=4.00, step=0.01)
-        marza_kwotowa = c14.number_input("Twój narzut (w PLN):", value=0, step=100)
+        
+        # POBIERANIE KURSU USD NA ŻYWO
+        aktualny_kurs = fetch_usd_rate()
+        kurs_usd = c13.number_input("Aktualny Kurs USD/PLN (z NBP):", value=aktualny_kurs, step=0.01)
+        marza_kwotowa = c14.number_input("Twój narzut (w PLN):", value=0.0, step=100.0)
 
     with col2:
         st.subheader("Wycena końcowa")
@@ -276,7 +283,6 @@ def view_calculator():
         osprzet_price = osprzet_dict.get(osprzet, 0)
         oswietlenie_price = oswietlenie_dict.get(oswietlenie, 0)
         ops_price = ops_dict.get(ops, 0)
-        # kluczyk_price jest już zdefiniowane powyżej
         
         suma_opcji_usd = (maszt_price + opony_price + kabina_price + widly_price + 
                           osprzet_price + oswietlenie_price + ops_price + kluczyk_price + 
@@ -302,7 +308,7 @@ def view_calculator():
         elif role == "Dealer":
             st.write("*(Szczegóły składowe są zastrzeżone)*")
             
-        st.markdown(f'<div class="price-box">Cena netto klienta:<br>{total_pln:,.2f} PLN<br><span style="font-size:14px; font-weight:normal;">(Zawiera narzut: {marza_kwotowa} PLN)</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="price-box">Cena netto klienta:<br>{total_pln:,.2f} PLN<br><span style="font-size:14px; font-weight:normal;">(Zawiera narzut: {marza_kwotowa:,.2f} PLN)</span></div>', unsafe_allow_html=True)
         
         st.button("Skopiuj konfigurację", use_container_width=True)
         st.button("Zapisz wycenę", use_container_width=True)
